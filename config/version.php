@@ -9,10 +9,10 @@ return [
     | Tracks the current core software version, build number, and update channel.
     |
     */
-    'version' => '1.0.0',
-    'build' => '2026101901',
-    'release_date' => '2026-10-19',
-    'min_php_version' => '8.5.12',
+    'version' => '1.0.6',
+    'build' => '2026110705',
+    'release_date' => '2026-11-07',
+    'min_php_version' => '8.3.0',
     'name' => env('APP_NAME', 'Foodness eCommerce'),
 
     /*

@@ -2,10 +2,12 @@
 
 namespace App\Console\Commands;
 
+use App\Support\ThemeCssPublisher;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use Symfony\Component\Process\Process;
 use ZipArchive;
 
 class BuildUpdatePackageCommand extends Command
@@ -17,7 +19,8 @@ class BuildUpdatePackageCommand extends Command
      */
     protected $signature = 'app:build-update 
                             {version : The new version number (e.g. 1.1.0)} 
-                            {--changelog= : Summary of changes in this release}';
+                            {--changelog= : Summary of changes in this release}
+                            {--skip-vite : Skip npm run build even if Node is available}';
 
     /**
      * The console command description.
@@ -39,6 +42,7 @@ class BuildUpdatePackageCommand extends Command
         'resources',
         'routes',
         'public/build',
+        'public/css',
     ];
 
     /**
@@ -105,6 +109,18 @@ class BuildUpdatePackageCommand extends Command
                 return self::SUCCESS;
             }
             @unlink($zipFilePath);
+        }
+
+        if (! $this->option('skip-vite')) {
+            $this->runViteBuildIfAvailable();
+        }
+
+        $this->info('Publishing theme CSS (npm not required)...');
+        $publish = app(ThemeCssPublisher::class)->publish();
+        if (! $publish['ok']) {
+            $this->warn($publish['message']);
+        } else {
+            $this->line('  ✓ '.$publish['message']);
         }
 
         $this->info("Packaging core files for version v{$version}...");
@@ -201,5 +217,43 @@ class BuildUpdatePackageCommand extends Command
         }
 
         return false;
+    }
+
+    protected function runViteBuildIfAvailable(): void
+    {
+        $npm = $this->resolveNpmBinary();
+        if ($npm === null) {
+            $this->warn('Node/npm not found — skipping Vite build. Theme CSS will still be published to public/css.');
+
+            return;
+        }
+
+        $this->info('Running npm run build...');
+        $process = new Process([$npm, 'run', 'build'], base_path(), null, null, 300);
+        $process->run(function (string $type, string $buffer): void {
+            $this->output->write($buffer);
+        });
+
+        if (! $process->isSuccessful()) {
+            $this->warn('Vite build failed — continuing with published theme CSS + existing public/build.');
+        }
+    }
+
+    protected function resolveNpmBinary(): ?string
+    {
+        foreach (['npm', 'npm.cmd'] as $binary) {
+            $process = Process::fromShellCommandline(
+                PHP_OS_FAMILY === 'Windows' ? "where {$binary}" : "command -v {$binary}"
+            );
+            $process->run();
+            if ($process->isSuccessful()) {
+                $line = trim(explode("\n", str_replace("\r", '', $process->getOutput()))[0] ?? '');
+                if ($line !== '') {
+                    return $line;
+                }
+            }
+        }
+
+        return null;
     }
 }

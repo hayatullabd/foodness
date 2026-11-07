@@ -2,6 +2,7 @@
 
 namespace App\Services\Update;
 
+use App\Support\ThemeCssPublisher;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
@@ -353,6 +354,16 @@ class SystemUpdateService
                 $this->persistNewVersion($extractedVersion);
             }
 
+            // 4b. Shared hosting: document root is parent of laravel/, so sync Vite build there
+            $this->syncSharedHostingPublicAssets();
+
+            // 4c. Always publish theme CSS (works without npm on shared hosts)
+            try {
+                app(ThemeCssPublisher::class)->publish();
+            } catch (Throwable $e) {
+                Log::warning('Theme CSS publish skipped after update.', ['error' => $e->getMessage()]);
+            }
+
             // 5. Execute safe migrations
             Artisan::call('migrate', ['--force' => true]);
 
@@ -438,6 +449,46 @@ class SystemUpdateService
 
         if ($updated) {
             File::put($configFile, $updated);
+        }
+    }
+
+    /**
+     * On cPanel shared layout (public/laravel + public/build), Vite assets must
+     * also land in the document-root /build folder browsers actually request.
+     */
+    protected function syncSharedHostingPublicAssets(): void
+    {
+        try {
+            $base = base_path();
+            if (basename($base) !== 'laravel') {
+                return;
+            }
+
+            $sourceBuild = public_path('build');
+            $targetBuild = dirname($base).DIRECTORY_SEPARATOR.'build';
+
+            if (! File::isDirectory($sourceBuild) || ! File::isDirectory(dirname($targetBuild))) {
+                return;
+            }
+
+            if (! File::isDirectory($targetBuild)) {
+                File::makeDirectory($targetBuild, 0755, true, true);
+            }
+
+            File::copyDirectory($sourceBuild, $targetBuild);
+
+            $sourceCss = public_path('css');
+            $targetCss = dirname($base).DIRECTORY_SEPARATOR.'css';
+            if (File::isDirectory($sourceCss)) {
+                if (! File::isDirectory($targetCss)) {
+                    File::makeDirectory($targetCss, 0755, true, true);
+                }
+                File::copyDirectory($sourceCss, $targetCss);
+            }
+        } catch (Throwable $e) {
+            Log::warning('Shared hosting public/build sync skipped.', [
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

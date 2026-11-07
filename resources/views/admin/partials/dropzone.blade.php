@@ -8,6 +8,7 @@
     'isVideo' => false,
     'maxHeight' => 'h-36',
     'removeName' => null,
+    'nativeFile' => false,
 ])
 
 @php
@@ -16,7 +17,7 @@
     $hasCurrent = !empty($current);
 @endphp
 
-<div class="space-y-1.5" id="{{ $dropzoneId }}_wrapper" data-dropzone-root>
+<div class="space-y-1.5" id="{{ $dropzoneId }}_wrapper" data-dropzone-root @if ($nativeFile) data-dropzone-native="1" @endif>
     @if ($label)
         <label class="admin-label !mb-0" for="{{ $inputId }}">{{ $label }}</label>
     @endif

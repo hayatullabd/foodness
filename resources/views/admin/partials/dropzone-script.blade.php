@@ -80,11 +80,12 @@
                 });
             });
 
-            // Trigger Media Modal on box click
+            // Trigger Media Modal on box click (skip for native file uploads e.g. ZIP packages)
+            const useNativeFile = root.getAttribute('data-dropzone-native') === '1';
             box.addEventListener('click', function (e) {
                 if (e.target.closest('[data-dropzone-clear-btn]') || e.target.closest('[data-dropzone-media-btn]')) return;
 
-                if (typeof window.openMediaPicker === 'function') {
+                if (! useNativeFile && typeof window.openMediaPicker === 'function') {
                     window.openMediaPicker({
                         multiple: false,
                         initialTab: 'library',
@@ -203,20 +204,27 @@
 
             function renderFileUI(file, originalSize) {
                 const isVideoFile = file.type.startsWith('video/');
-                const objectUrl = URL.createObjectURL(file);
+                const isImageFile = file.type.startsWith('image/');
 
                 if (isVideoFile && previewVideo) {
+                    const objectUrl = URL.createObjectURL(file);
                     previewVideo.src = objectUrl;
                     previewVideo.classList.remove('hidden');
                     if (previewImg) previewImg.classList.add('hidden');
-                } else if (previewImg) {
+                    if (previewWrap) previewWrap.classList.remove('hidden');
+                    if (placeholder) placeholder.classList.add('hidden');
+                } else if (isImageFile && previewImg) {
+                    const objectUrl = URL.createObjectURL(file);
                     previewImg.src = objectUrl;
                     previewImg.classList.remove('hidden');
                     if (previewVideo) previewVideo.classList.add('hidden');
+                    if (previewWrap) previewWrap.classList.remove('hidden');
+                    if (placeholder) placeholder.classList.add('hidden');
+                } else {
+                    // Non-media files (ZIP, PDF, etc.): keep placeholder, show filename bar only
+                    if (previewWrap) previewWrap.classList.add('hidden');
+                    if (placeholder) placeholder.classList.remove('hidden');
                 }
-
-                if (previewWrap) previewWrap.classList.remove('hidden');
-                if (placeholder) placeholder.classList.add('hidden');
 
                 if (infoBar) {
                     infoBar.classList.remove('hidden');

@@ -448,6 +448,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 Route::get('/', [AdminSystemUpdateController::class, 'index'])->name('index');
                 Route::post('apply-zip', [AdminSystemUpdateController::class, 'applyZip'])->name('apply-zip');
                 Route::post('apply-online', [AdminSystemUpdateController::class, 'applyOnline'])->name('apply-online');
+                Route::post('publish-theme-css', [AdminSystemUpdateController::class, 'publishThemeCss'])->name('publish-theme-css');
             });
         });
 

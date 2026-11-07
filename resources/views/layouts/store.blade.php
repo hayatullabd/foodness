@@ -52,6 +52,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Galada&family=Manrope:wght@700;800&family=Noto+Sans+Bengali:wght@400;500;600;700;800&family=Noto+Serif+Bengali:wght@500;600;700;800;900&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- Standalone theme CSS: updates without npm/Vite rebuild --}}
+    <link rel="stylesheet" href="{{ asset('css/foodness-theme.css') }}?v={{ urlencode((string) config('version.version', '1')) }}-{{ urlencode((string) config('version.build', '0')) }}">
     <style>
         :root {
             --color-canvas: {{ $store['theme_canvas_color'] ?? '#F7EDDE' }};
@@ -505,18 +507,51 @@
                 </a>
                 <p>{{ $store['footer_about_text'] ?? 'দেশের সেরা বাগান ও বিশ্বস্ত উৎপাদকদের কাছ থেকে সংগ্রহ করা খাঁটি খাবার পৌঁছে দিই আপনার ঘরে।' }}</p>
                 @if (!empty($store['social_facebook']) || !empty($store['social_instagram']) || !empty($store['social_youtube']) || !empty($store['social_whatsapp']))
-                    <div class="social-links">
+                    {{-- Soft glass circles on dark footer; icon glyph kept smaller than the ring --}}
+                    <style>
+                        .fn-store .social-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+                        .fn-store .social-links__item{
+                            display:grid;place-items:center;
+                            width:38px;height:38px;
+                            color:#fff!important;
+                            background:rgba(255,255,255,.06)!important;
+                            border:1px solid rgba(255,255,255,.28)!important;
+                            border-radius:999px!important;
+                            box-shadow:none!important;
+                            transition:transform .2s ease,background .2s ease,border-color .2s ease;
+                        }
+                        .fn-store .social-links__item svg{width:14px;height:14px;fill:currentColor;display:block}
+                        .fn-store .social-links__item:hover{
+                            transform:translateY(-2px);
+                            color:#fff!important;
+                            background:rgba(255,255,255,.14)!important;
+                            border-color:rgba(255,255,255,.45)!important;
+                        }
+                        .fn-store .social-links__item--facebook:hover{background:#1877F2!important;border-color:#1877F2!important}
+                        .fn-store .social-links__item--instagram:hover{background:linear-gradient(135deg,#f58529,#dd2a7b 48%,#8134af)!important;border-color:transparent!important}
+                        .fn-store .social-links__item--youtube:hover{background:#FF0000!important;border-color:#FF0000!important}
+                        .fn-store .social-links__item--whatsapp:hover{background:#25D366!important;border-color:#25D366!important}
+                    </style>
+                    <div class="social-links" aria-label="Social media">
                         @if (!empty($store['social_facebook']))
-                            <a href="{{ $store['social_facebook'] }}" target="_blank" rel="noopener" aria-label="Facebook">f</a>
+                            <a class="social-links__item social-links__item--facebook" href="{{ $store['social_facebook'] }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.28);border-radius:999px;color:#fff;width:38px;height:38px;display:grid;place-items:center">
+                                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" style="width:14px;height:14px;fill:currentColor"><path d="M14 9h3V6h-3c-2.2 0-4 1.8-4 4v2H7v3h3v7h3v-7h3l1-3h-4v-2c0-.6.4-1 1-1z"/></svg>
+                            </a>
                         @endif
                         @if (!empty($store['social_instagram']))
-                            <a href="{{ $store['social_instagram'] }}" target="_blank" rel="noopener" aria-label="Instagram">◎</a>
+                            <a class="social-links__item social-links__item--instagram" href="{{ $store['social_instagram'] }}" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.28);border-radius:999px;color:#fff;width:38px;height:38px;display:grid;place-items:center">
+                                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" style="width:14px;height:14px;fill:currentColor"><path d="M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zm5 4.5A4.5 4.5 0 1 0 16.5 12 4.5 4.5 0 0 0 12 7.5zm0 7.2A2.7 2.7 0 1 1 14.7 12 2.7 2.7 0 0 1 12 14.7zM17.8 6.2a1.2 1.2 0 1 0 1.2 1.2 1.2 1.2 0 0 0-1.2-1.2z"/></svg>
+                            </a>
                         @endif
                         @if (!empty($store['social_youtube']))
-                            <a href="{{ $store['social_youtube'] }}" target="_blank" rel="noopener" aria-label="Youtube">▶</a>
+                            <a class="social-links__item social-links__item--youtube" href="{{ $store['social_youtube'] }}" target="_blank" rel="noopener noreferrer" aria-label="YouTube" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.28);border-radius:999px;color:#fff;width:38px;height:38px;display:grid;place-items:center">
+                                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" style="width:14px;height:14px;fill:currentColor"><path d="M23 12.2s0-3.2-.4-4.7a2.9 2.9 0 0 0-2.1-2.1C18.9 5 12 5 12 5s-6.9 0-8.5.4a2.9 2.9 0 0 0-2.1 2.1C1 9 1 12.2 1 12.2s0 3.2.4 4.7a2.9 2.9 0 0 0 2.1 2.1C5.1 19.4 12 19.4 12 19.4s6.9 0 8.5-.4a2.9 2.9 0 0 0 2.1-2.1c.4-1.5.4-4.7.4-4.7ZM9.8 15.5v-6.6l5.8 3.3-5.8 3.3Z"/></svg>
+                            </a>
                         @endif
                         @if (!empty($store['social_whatsapp']))
-                            <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $store['social_whatsapp']) }}" target="_blank" rel="noopener" aria-label="WhatsApp">w</a>
+                            <a class="social-links__item social-links__item--whatsapp" href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $store['social_whatsapp']) }}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.28);border-radius:999px;color:#fff;width:38px;height:38px;display:grid;place-items:center">
+                                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" style="width:14px;height:14px;fill:currentColor"><path d="M12 2a10 10 0 0 0-8.7 14.9L2 22l5.3-1.4A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-3.1.8.8-3-.2-.3A8 8 0 1 1 12 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.4 6.4 0 0 1-1.9-1.2 7 7 0 0 1-1.3-1.6c-.1-.3 0-.4.1-.5l.3-.4.1-.3a.5.5 0 0 0 0-.5c0-.1-.5-1.3-.7-1.8s-.4-.4-.5-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1 4.9 4.9 0 0 0 1 2.6 11 11 0 0 0 4.3 3.8 14 14 0 0 0 1.4.5 3.4 3.4 0 0 0 1.6.1 2.6 2.6 0 0 0 1.7-1.2 2 2 0 0 0 .2-1.1c0-.2-.2-.3-.4-.4z"/></svg>
+                            </a>
                         @endif
                     </div>
                 @endif

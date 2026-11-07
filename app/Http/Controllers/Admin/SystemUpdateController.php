@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\Update\SystemUpdateService;
+use App\Support\ThemeCssPublisher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -31,7 +32,8 @@ class SystemUpdateController extends Controller
     public function applyZip(Request $request, SystemUpdateService $updater): RedirectResponse
     {
         $request->validate([
-            'update_zip' => ['required', 'file', 'mimes:zip', 'max:102400'], // 100MB limit
+            // extensions: covers Windows MIME quirks (octet-stream / x-zip-compressed)
+            'update_zip' => ['required', 'file', 'extensions:zip', 'max:102400'], // 100MB limit
         ]);
 
         $result = $updater->applyZipUpdate($request->file('update_zip'));
@@ -45,6 +47,15 @@ class SystemUpdateController extends Controller
         return redirect()
             ->route('admin.system-update.index')
             ->with('success', $result['message']);
+    }
+
+    public function publishThemeCss(ThemeCssPublisher $publisher): RedirectResponse
+    {
+        $result = $publisher->publish();
+
+        return redirect()
+            ->route('admin.system-update.index')
+            ->with($result['ok'] ? 'success' : 'error', $result['message']);
     }
 
     public function applyOnline(Request $request, SystemUpdateService $updater): RedirectResponse

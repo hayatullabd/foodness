@@ -103,6 +103,27 @@
             </div>
         @endif
 
+        {{-- Theme CSS publish (no npm needed) --}}
+        <div class="admin-card admin-card-body space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-bold text-foreground">Publish Theme CSS</h3>
+                    <p class="text-sm text-muted">
+                        Rebuild storefront theme styles without Node/npm. Copies
+                        <code class="text-xs font-mono bg-muted/30 px-1 py-0.5 rounded">resources/css/foodness-theme.css</code>
+                        → <code class="text-xs font-mono bg-muted/30 px-1 py-0.5 rounded">public/css/</code>
+                        (and shared-host document root when applicable).
+                    </p>
+                </div>
+                <form method="POST" action="{{ route('admin.system-update.publish-theme-css') }}">
+                    @csrf
+                    <button type="submit" class="btn-primary whitespace-nowrap">
+                        Publish Theme CSS
+                    </button>
+                </form>
+            </div>
+        </div>
+
         {{-- Manual Zip Upload Update --}}
         <div class="admin-card admin-card-body space-y-4">
             <div>
@@ -115,15 +136,17 @@
             <form method="POST" action="{{ route('admin.system-update.apply-zip') }}" enctype="multipart/form-data" class="space-y-4" onsubmit="return confirm('Make sure you have tested or backed up before applying. Proceed?');">
                 @csrf
 
-                <div>
-                    @include('admin.partials.dropzone', [
-                        'name' => 'update_zip',
-                        'id' => 'update_zip',
-                        'label' => 'Select Update Package (.zip)',
-                        'accept' => '.zip,application/zip,application/x-zip-compressed',
-                        'hint' => 'Click or drag & drop update_vX.X.X.zip package here to upgrade safely',
-                        'maxHeight' => 'h-32',
-                    ])
+                <div class="space-y-1.5">
+                    <label class="admin-label !mb-0" for="update_zip">Select Update Package (.zip)</label>
+                    <input
+                        type="file"
+                        name="update_zip"
+                        id="update_zip"
+                        accept=".zip,application/zip,application/x-zip-compressed"
+                        required
+                        class="block w-full text-sm text-foreground file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:opacity-90 cursor-pointer rounded-xl border border-border bg-background px-3 py-3"
+                    >
+                    <p class="text-xs text-muted">Choose the <code class="font-mono bg-muted/30 px-1 py-0.5 rounded">update_vX.X.X.zip</code> file from your computer, then click Upload &amp; Apply Update.</p>
                     @error('update_zip')
                         <p class="mt-1 text-sm text-accent">{{ $message }}</p>
                     @enderror
