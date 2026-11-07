@@ -1,0 +1,40 @@
+@php($subcategory = $subcategory ?? null)
+
+<div>
+    <label class="admin-label" for="category_id">Category</label>
+    <select id="category_id" name="category_id" required class="field">
+        <option value="">Select category</option>
+        @foreach ($categories as $category)
+            <option value="{{ $category->id }}" @selected(old('category_id', $subcategory?->category_id) == $category->id)>{{ $category->name }}</option>
+        @endforeach
+    </select>
+    @error('category_id') <p class="mt-1 text-sm text-accent">{{ $message }}</p> @enderror
+</div>
+<div>
+    <label class="admin-label" for="name">Name</label>
+    <input id="name" name="name" type="text" value="{{ old('name', $subcategory?->name) }}" required class="field">
+    @error('name') <p class="mt-1 text-sm text-accent">{{ $message }}</p> @enderror
+</div>
+<div>
+    <label class="admin-label" for="slug">Slug</label>
+    <input id="slug" name="slug" type="text" value="{{ old('slug', $subcategory?->slug) }}" class="field" placeholder="auto from name">
+</div>
+<div>
+    <label class="admin-label" for="sort_order">Sort order</label>
+    <input id="sort_order" name="sort_order" type="number" min="0" value="{{ old('sort_order', $subcategory?->sort_order ?? 0) }}" class="field">
+</div>
+<div>
+    @include('admin.partials.dropzone', [
+        'name' => 'image',
+        'id' => 'image',
+        'label' => 'Subcategory Image',
+        'current' => $subcategory?->image ? asset('storage/'.$subcategory->image) : null,
+        'hint' => 'Recommended: 800 × 800 px (1:1) · PNG, JPG, WEBP · Max 4 MB',
+        'maxHeight' => 'h-28',
+    ])
+    @error('image') <p class="mt-1 text-sm text-accent">{{ $message }}</p> @enderror
+</div>
+<label class="flex items-center gap-2 text-sm">
+    <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $subcategory?->is_active ?? true))>
+    Active
+</label>

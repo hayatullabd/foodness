@@ -1,0 +1,9 @@
+.git
+.github
+vendor
+node_modules
+storage/*.key
+public/storage
+.env.backup
+.phpunit.result.cache
+*.log

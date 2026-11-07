@@ -1,0 +1,7 @@
+{
+  "name": "foodness-checkout-voices",
+  "private": true,
+  "dependencies": {
+    "@andresaya/edge-tts": "1.9.1"
+  }
+}
