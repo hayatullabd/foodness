@@ -88,19 +88,21 @@ Domains → আপনার ডোমেইন → Document Root:
 
 ### 2.5 `.env`
 
-File Manager → **Show Hidden Files** → `.env.example` কপি → নাম `.env`
+File Manager → **Show Hidden Files** → `.env.production.example` (বা `.env.example`) কপি → নাম `.env`
 
 ```env
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://your-domain.com
-APP_KEY=   # খালি রাখবেন না
+APP_KEY=   # খালি রাখবেন না — পরে key:generate চালাবেন
+APP_TIMEZONE=Asia/Dhaka
 
 DB_HOST=localhost
 DB_DATABASE=cpanel_db_name
 DB_USERNAME=cpanel_db_user
 DB_PASSWORD=cpanel_db_password
 
+LOG_LEVEL=error
 SESSION_DRIVER=database
 CACHE_STORE=database
 QUEUE_CONNECTION=database
@@ -161,6 +163,7 @@ if (file_exists($maintenance = $base.'/storage/framework/maintenance.php')) {
 require $base.'/vendor/autoload.php';
 /** @var Application $app */
 $app = require_once $base.'/bootstrap/app.php';
+$app->usePublicPath(__DIR__);
 $app->handleRequest(Request::capture());
 EOF
 
@@ -209,12 +212,18 @@ composer dump-autoload
 
 - [ ] `APP_DEBUG=false`
 - [ ] `APP_ENV=production`
-- [ ] Strong `APP_KEY` (`php artisan key:generate`)
+- [ ] Strong `APP_KEY` (`php artisan key:generate --force`) — **required before encrypting any API keys**
+- [ ] After DB import / key rotate: `php artisan app:scrub-invalid-secrets` (clears undecryptable AI keys safely)
+- [ ] Re-enter secrets in Admin under the **new** APP_KEY: AI Providers, Courier, Payment, Mail, SMS, pixels
+- [ ] Never copy `.env` APP_KEY from local to production (or vice versa) unless you also move the same encrypted DB
 - [ ] `.env` permission `640`
-- [ ] Document Root = `public` only
+- [ ] Document Root = `public` only (or shared-host root with `laravel/` subfolder)
 - [ ] If using `public/laravel/` → `.htaccess` = `Require all denied`
-- [ ] Delete `t.php`, `boot.php`, `cpanel-check.php`
+- [ ] No diagnostic PHP left in `public/` (`t.php`, `boot.php`, `phpinfo.php`)
 - [ ] HTTPS on + `SESSION_SECURE_COOKIE=true`
+- [ ] Run `bash deploy-optimize.sh` (or the artisan cache commands below) after deploy
+- [ ] `composer install --no-dev --optimize-autoloader`
+- [ ] Frontend assets built (`npm run build` or packaged `public/build` + `public/css`)
 
 ---
 
