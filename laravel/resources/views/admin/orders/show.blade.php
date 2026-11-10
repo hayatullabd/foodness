@@ -18,6 +18,9 @@
         'cancelled', 'courier_returned' => 'admin-badge-danger',
         default => 'admin-badge-neutral',
     };
+    $hasFreeDelivery = $order->shipping_charge <= 0 || $order->items->contains(function ($item) {
+        return (bool) ($item->product?->free_delivery || $item->variant?->isFreeDelivery());
+    });
     $initialItems = $order->items->map(function ($item) {
         $imagePath = $item->product?->primaryImagePath();
 
@@ -32,6 +35,7 @@
             'variation_name' => $item->variation_name,
             'variant_id' => $item->variant_id,
             'attributes' => $item->attributes,
+            'free_delivery' => (bool) ($item->product?->free_delivery || $item->variant?->isFreeDelivery()),
             'qty' => (int) $item->qty,
             'price' => (float) $item->price,
             'discount' => (float) $item->discount,
@@ -333,11 +337,12 @@
                                         <label class="admin-label" for="summary-subtotal-input">Sub Total</label>
                                         <input id="summary-subtotal-input" type="text" class="field bg-mist" value="{{ number_format((float) $order->subtotal, 2, '.', '') }}" readonly>
                                     </div>
-                                    <div>
+                                    <div class="od-order-total__delivery">
                                         <label class="admin-label" for="shipping_charge_select">Delivery Area</label>
                                         <div class="od-delivery-box">
                                             <select id="shipping_charge_select" class="od-delivery-box__method {{ $order->isCourierBooked() ? 'cursor-not-allowed opacity-75' : '' }}" aria-label="Delivery area" {{ $order->isCourierBooked() ? 'disabled' : '' }}>
                                                 <option value="" data-amount="">Custom</option>
+                                                <option value="free" data-amount="0.00" @selected((float) old('shipping_charge', $order->shipping_charge) <= 0)>Free Delivery (৳0.00)</option>
                                                 @foreach ($shippingCharges as $charge)
                                                     <option
                                                         value="{{ $charge->id }}"
@@ -362,7 +367,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div>
+                                    <div class="od-order-total__method">
                                         <label class="admin-label" for="delivery_method">Delivery Method</label>
                                         @if (! empty($courierProviders))
                                             <select id="delivery_method" name="courier_api_id" class="field {{ $order->isCourierBooked() ? 'bg-slate-50 cursor-not-allowed text-slate-500' : '' }}" aria-label="Delivery method / courier" {{ $order->isCourierBooked() ? 'disabled' : '' }}>
@@ -887,6 +892,15 @@
                 shippingSelect.value = match ? match.value : '';
             };
 
+            const checkFreeDeliveryRules = () => {
+                if (isLocked) return;
+                const hasFreeItem = items.some((it) => !!it.free_delivery);
+                if (hasFreeItem && shippingInput && Number(shippingInput.value || 0) > 0) {
+                    shippingInput.value = '0.00';
+                    syncShippingMethodFromAmount();
+                }
+            };
+
             if (! isLocked) {
                 shippingInput?.addEventListener('input', () => {
                     syncShippingMethodFromAmount();
@@ -904,6 +918,7 @@
                             recalculate();
                         }
                     });
+                    checkFreeDeliveryRules();
                     syncShippingMethodFromAmount();
                 }
             }
@@ -931,10 +946,12 @@
                         id: null, product_id: product.id, product_name: product.name,
                         sku: product.sku || '', slug: product.slug || '',
                         color: '', size: '', qty: 1, price: product.price, discount: 0,
+                        free_delivery: !!product.free_delivery,
                         stock: product.stock, image_url: product.image_url,
                     });
                     searchInput.value = '';
                     hideResults();
+                    checkFreeDeliveryRules();
                     render();
                 });
 

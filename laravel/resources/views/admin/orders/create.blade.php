@@ -230,11 +230,12 @@
                                         <label class="admin-label" for="summary-subtotal-input">Sub Total</label>
                                         <input id="summary-subtotal-input" type="text" class="field bg-mist" value="0.00" readonly>
                                     </div>
-                                    <div>
+                                    <div class="od-order-total__delivery">
                                         <label class="admin-label" for="shipping_charge_select">Delivery Area</label>
                                         <div class="od-delivery-box">
                                             <select id="shipping_charge_select" class="od-delivery-box__method" aria-label="Delivery area">
                                                 <option value="" data-amount="">Custom</option>
+                                                <option value="free" data-amount="0.00" @selected((float) $initialShippingAmount <= 0)>Free Delivery (৳0.00)</option>
                                                 @foreach ($shippingCharges as $charge)
                                                     <option
                                                         value="{{ $charge->id }}"
@@ -258,7 +259,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div>
+                                    <div class="od-order-total__method">
                                         <label class="admin-label" for="delivery_method">Delivery Method</label>
                                         @if (! empty($courierProviders))
                                             <select id="delivery_method" name="courier_api_id" class="field" aria-label="Delivery method / courier">
@@ -649,6 +650,14 @@
                 shippingSelect.value = match ? match.value : '';
             };
 
+            const checkFreeDeliveryRules = () => {
+                const hasFreeItem = items.some((it) => !!it.free_delivery);
+                if (hasFreeItem && shippingInput && Number(shippingInput.value || 0) > 0) {
+                    shippingInput.value = '0.00';
+                    syncShippingMethodFromAmount();
+                }
+            };
+
             shippingInput?.addEventListener('input', () => {
                 syncShippingMethodFromAmount();
                 recalculate();
@@ -692,11 +701,13 @@
                         qty: 1,
                         price: product.price,
                         discount: 0,
+                        free_delivery: !!product.free_delivery,
                         stock: product.stock,
                         image_url: product.image_url,
                     });
                     searchInput.value = '';
                     hideResults();
+                    checkFreeDeliveryRules();
                     render();
                 });
 

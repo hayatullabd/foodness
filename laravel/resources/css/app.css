@@ -2858,13 +2858,17 @@ body.is-col-resizing * {
 
 @media (min-width: 1100px) {
     .admin-app .order-detail .od-order-total {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    }
+    .admin-app .order-detail .od-order-total > .od-order-total__delivery,
+    .admin-app .order-detail .od-order-total > .od-order-total__method {
+        min-width: 180px;
     }
 }
 
 .admin-app .order-detail .od-delivery-box {
     display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(4.5rem, 0.9fr);
+    grid-template-columns: minmax(0, 1fr) auto;
     overflow: hidden;
     border: 1px solid color-mix(in oklab, var(--color-ink) 12%, transparent);
     border-radius: 0.45rem;
@@ -2873,10 +2877,11 @@ body.is-col-resizing * {
 
 .admin-app .order-detail .od-delivery-box__method {
     min-width: 0;
+    width: 100%;
     border: 0;
     border-right: 1px solid color-mix(in oklab, var(--color-ink) 10%, transparent);
     background: transparent;
-    padding: 0.45rem 0.55rem;
+    padding: 0.45rem 0.35rem 0.45rem 0.5rem;
     font-size: 0.72rem;
     color: var(--color-ink);
     outline: none;
@@ -2885,10 +2890,12 @@ body.is-col-resizing * {
 
 .admin-app .order-detail .od-delivery-box__amount {
     display: flex;
-    min-width: 0;
+    min-width: 4.2rem;
+    width: 4.5rem;
+    flex-shrink: 0;
     align-items: center;
     gap: 0.15rem;
-    padding: 0 0.45rem;
+    padding: 0 0.35rem;
     background: color-mix(in oklab, var(--color-mist) 45%, white);
 }
 

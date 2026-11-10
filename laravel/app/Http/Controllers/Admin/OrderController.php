@@ -1029,6 +1029,7 @@ class OrderController extends Controller
                     'name' => $product->name,
                     'sku' => $product->sku,
                     'price' => (float) $product->price,
+                    'free_delivery' => (bool) $product->free_delivery,
                     'stock' => (int) $product->stock,
                     'image_url' => $imagePath ? asset('storage/'.$imagePath) : null,
                     'colors' => ($variantColors->isNotEmpty() ? $variantColors : $colors)->values()->all(),
