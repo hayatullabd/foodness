@@ -11,6 +11,12 @@
         $storeLogo = \App\Support\StoreSettings::get('store_logo', null);
     @endphp
     <title>Print Studio - Consignment #{{ $firstOrder?->tracking_number ?: $firstOrder?->invoice_no }}</title>
+    <style id="print-page-style">
+        @page {
+            size: auto;
+            margin: 0;
+        }
+    </style>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -374,11 +380,6 @@
         }
 
         /* Print Media Styles */
-        @page {
-            size: 3in 3in;
-            margin: 0;
-        }
-
         @media print {
             body {
                 background: #ffffff !important;
@@ -391,6 +392,7 @@
             .preview-area {
                 padding: 0 !important;
                 gap: 0 !important;
+                display: block !important;
             }
             .sticker-card {
                 width: 100% !important;
@@ -400,6 +402,8 @@
                 border-radius: 0 !important;
                 margin: 0 !important;
                 padding: 3mm 4mm !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
                 page-break-after: always !important;
                 break-after: page !important;
             }
@@ -465,6 +469,9 @@
                 $itemsSummary = $order->items->map(function ($item) {
                     $name = $item->product_name;
                     $variant = $item->variantLabel();
+                    if ($variant && (str_contains($variant, 'order_id:') || str_contains($variant, 'product_id:') || str_contains($variant, 'created_at:') || str_starts_with($variant, 'id:'))) {
+                        $variant = null;
+                    }
                     $label = $variant ? "{$name} ({$variant})" : $name;
                     return Str::limit($label, 45) . ($item->qty > 1 ? " x {$item->qty}" : '');
                 })->implode(', ');
@@ -580,6 +587,15 @@
                     card.classList.remove('fmt-2x3');
                 }
             });
+
+            var printStyle = document.getElementById('print-page-style');
+            if (printStyle) {
+                if (fmt === '2x3') {
+                    printStyle.innerHTML = '@page { size: 2in auto; margin: 0; }';
+                } else {
+                    printStyle.innerHTML = '@page { size: auto; margin: 0; }';
+                }
+            }
         }
     </script>
 </body>
