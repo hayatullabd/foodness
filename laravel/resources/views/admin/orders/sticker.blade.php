@@ -25,6 +25,8 @@
             margin: 0;
             padding: 0;
             background: #e2e8f0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         /* Top Green Studio Header */
@@ -381,18 +383,22 @@
 
         /* Print Media Styles */
         @media print {
-            body {
+            html, body {
                 background: #ffffff !important;
                 padding: 0 !important;
                 margin: 0 !important;
+                width: 100% !important;
+                height: auto !important;
             }
             .studio-header, .format-bar {
                 display: none !important;
             }
             .preview-area {
                 padding: 0 !important;
+                margin: 0 !important;
                 gap: 0 !important;
                 display: block !important;
+                width: 100% !important;
             }
             .sticker-card {
                 width: 100% !important;
@@ -402,6 +408,7 @@
                 border-radius: 0 !important;
                 margin: 0 !important;
                 padding: 3mm 4mm !important;
+                box-sizing: border-box !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 page-break-after: always !important;
