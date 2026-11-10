@@ -283,7 +283,7 @@
                     }
                 }
             } else {
-                const message = data?.message || 'An unexpected error occurred. Please try again.';
+                const message = data?.message || (response.status === 404 ? 'Item not found or already removed.' : 'An unexpected error occurred (Status: ' + response.status + '). Please try again.');
                 window.showAdminToast(message, 'error');
             }
         } catch (err) {

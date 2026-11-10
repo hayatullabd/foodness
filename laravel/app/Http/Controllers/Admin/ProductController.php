@@ -219,14 +219,26 @@ class ProductController extends Controller
             ->with('success', 'Product deleted successfully.');
     }
 
-    public function destroyImage(Request $request, Product $product, ProductImage $image): JsonResponse|RedirectResponse
+    public function destroyImage(Request $request, Product $product, int|string|ProductImage $image): JsonResponse|RedirectResponse
     {
-        abort_unless($image->product_id === $product->id, 404);
+        $imageModel = $image instanceof ProductImage
+            ? $image
+            : ProductImage::query()->where('product_id', $product->id)->find($image);
+
+        if (! $imageModel || (int) $imageModel->product_id !== (int) $product->id) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Image already removed.',
+                ]);
+            }
+            return back()->with('success', 'Image removed from gallery.');
+        }
 
         try {
-            $path = $image->path;
-            $wasPrimary = $image->is_primary;
-            $image->delete();
+            $path = $imageModel->path;
+            $wasPrimary = $imageModel->is_primary;
+            $imageModel->delete();
 
             // Safely check if this image path is used anywhere else before deleting the physical file
             if ($path) {

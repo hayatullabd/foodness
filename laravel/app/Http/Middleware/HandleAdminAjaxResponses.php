@@ -33,6 +33,13 @@ class HandleAdminAjaxResponses
                     'redirect' => $targetUrl,
                 ]);
             }
+
+            if ($response->getStatusCode() === 404) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Requested item not found or already deleted.',
+                ], 404);
+            }
         }
 
         return $response;
