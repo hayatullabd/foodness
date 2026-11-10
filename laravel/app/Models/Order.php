@@ -139,6 +139,97 @@ class Order extends Model
         return filled($this->tracking_number);
     }
 
+    /**
+     * Compute total weight in KG from ordered items' attributes/variations/names.
+     */
+    public function estimatedWeightKg(): float
+    {
+        if ($this->relationLoaded('items')) {
+            $items = $this->items;
+        } else {
+            $items = $this->items()->with(['variant', 'product'])->get();
+        }
+
+        $totalKg = 0.0;
+
+        foreach ($items as $item) {
+            $qty = max(1, (int) $item->qty);
+            $itemWeight = null;
+
+            // Sources to search in order of priority:
+            // 1. attributes array / json
+            // 2. variation_name
+            // 3. variant name / attribute_values
+            // 4. product_name
+            // 5. product unit
+            $sources = [];
+
+            if (is_array($item->attributes)) {
+                $sources = array_merge($sources, array_values($item->attributes));
+            }
+
+            if (! empty($item->variation_name)) {
+                $sources[] = (string) $item->variation_name;
+            }
+
+            if ($item->relationLoaded('variant') && $item->variant) {
+                if (! empty($item->variant->name)) {
+                    $sources[] = (string) $item->variant->name;
+                }
+                if (is_array($item->variant->attribute_values)) {
+                    $sources = array_merge($sources, array_values($item->variant->attribute_values));
+                }
+            }
+
+            if (! empty($item->product_name)) {
+                $sources[] = (string) $item->product_name;
+            }
+
+            foreach ($sources as $source) {
+                if (! is_string($source) || trim($source) === '') {
+                    continue;
+                }
+
+                $weight = $this->parseWeightString($source);
+                if ($weight !== null && $weight > 0) {
+                    $itemWeight = $weight;
+                    break;
+                }
+            }
+
+            // Default to 1 KG per line item if no weight pattern detected
+            $itemWeight = $itemWeight ?? 1.0;
+            $totalKg += ($itemWeight * $qty);
+        }
+
+        return $totalKg > 0 ? round($totalKg, 2) : 1.0;
+    }
+
+    /**
+     * Parse weight in KG from Bengali or English text.
+     */
+    protected function parseWeightString(string $text): ?float
+    {
+        // Convert Bengali numerals to English numerals
+        $s = str_replace(
+            ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'],
+            ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+            $text
+        );
+
+        // Pattern 1: KG / কেজি (e.g. "1.5 kg", "১ কেজি", "11 কেজি")
+        if (preg_match('/([\d\.]+)\s*(?:kg|কেজি|কে\.জি|k\.g)/iu', $s, $m)) {
+            return (float) $m[1];
+        }
+
+        // Pattern 2: Gram / গ্রাম / GM (e.g. "500 গ্রাম", "250 gm", "500g")
+        if (preg_match('/([\d\.]+)\s*(?:gm|gram|g|গ্রাম|গ্রা|গ্রামের)/iu', $s, $m)) {
+            return (float) $m[1] / 1000.0;
+        }
+
+        return null;
+    }
+
     public function isEditable(): bool
     {
         return ! $this->isCourierBooked();

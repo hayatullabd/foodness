@@ -519,7 +519,7 @@
                         </tr>
                         <tr>
                             <td class="meta-label">WEIGHT</td>
-                            <td class="meta-value">{{ $order->weight ?: '1' }} KG</td>
+                            <td class="meta-value">{{ (float) ($order->weight ?? $order->estimatedWeightKg()) }} KG</td>
                         </tr>
                     </table>
                 </div>
