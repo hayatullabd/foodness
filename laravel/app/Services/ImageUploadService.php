@@ -23,7 +23,7 @@ class ImageUploadService
         ?string $prefixContext = null,
         string $disk = 'public'
     ): string {
-        $filename = self::generateFileName($file, $prefixContext);
+        $filename = self::generateFileName($file, $prefixContext, $directory, $disk);
 
         return $file->storeAs($directory, $filename, $disk);
     }
@@ -66,33 +66,35 @@ class ImageUploadService
     }
 
     /**
-     * Generate an SEO-friendly and unique filename.
+     * Generate a safe filename keeping the original name.
+     * If a file with the same name already exists in the destination, append a counter (e.g. photo-1.jpg).
      */
-    public static function generateFileName(UploadedFile $file, ?string $prefixContext = null): string
+    public static function generateFileName(UploadedFile $file, ?string $prefixContext = null, string $directory = 'uploads', string $disk = 'public'): string
     {
-        $baseName = '';
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'jpg');
 
-        if ($prefixContext !== null && trim($prefixContext) !== '') {
-            $baseName = Str::slug(trim($prefixContext));
+        // Sanitize original filename (remove unsafe characters, preserve readable spaces/hyphens/alphanumeric)
+        $cleanName = preg_replace('/[^\p{L}\p{N}_\-\s\.]+/u', '', $originalName);
+        $cleanName = trim(preg_replace('/\s+/', '-', (string) $cleanName), '-._');
+
+        if ($cleanName === '') {
+            $cleanName = $prefixContext ? Str::slug($prefixContext) : 'file';
         }
 
-        if ($baseName === '') {
-            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-            $baseName = Str::slug($originalName);
+        $filename = "{$cleanName}.{$extension}";
+        $targetDir = trim($directory, '/');
+
+        // If file already exists, append incremental suffix: filename-1.ext, filename-2.ext
+        if (Storage::disk($disk)->exists($targetDir . '/' . $filename)) {
+            $counter = 1;
+            while (Storage::disk($disk)->exists($targetDir . "/{$cleanName}-{$counter}.{$extension}")) {
+                $counter++;
+            }
+            $filename = "{$cleanName}-{$counter}.{$extension}";
         }
 
-        if ($baseName === '') {
-            $baseName = 'image';
-        }
-
-        // Limit base name length to 50 characters for filesystem and URL safety
-        $baseName = Str::substr($baseName, 0, 50);
-
-        $timestamp = now()->format('YmdHis');
-        $random = Str::lower(Str::random(6));
-        $extension = strtolower($file->guessExtension() ?: $file->getClientOriginalExtension() ?: 'jpg');
-
-        return "{$baseName}-{$timestamp}-{$random}.{$extension}";
+        return $filename;
     }
 
     /**

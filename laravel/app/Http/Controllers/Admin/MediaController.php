@@ -170,7 +170,24 @@ class MediaController extends Controller
                 continue;
             }
 
-            $filename = Str::uuid()->toString().'.'.$extension;
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $cleanName = preg_replace('/[^\p{L}\p{N}_\-\s\.]+/u', '', $originalName);
+            $cleanName = trim(preg_replace('/\s+/', '-', (string) $cleanName), '-._');
+            if ($cleanName === '') {
+                $cleanName = 'media-file';
+            }
+
+            $filename = "{$cleanName}.{$extension}";
+            $targetDir = trim($folder, '/');
+
+            // If file already exists, append incremental suffix: filename-1.ext, filename-2.ext
+            if (Storage::disk('public')->exists($targetDir . '/' . $filename)) {
+                $counter = 1;
+                while (Storage::disk('public')->exists($targetDir . "/{$cleanName}-{$counter}.{$extension}")) {
+                    $counter++;
+                }
+                $filename = "{$cleanName}-{$counter}.{$extension}";
+            }
 
             $storedPath = $file->storeAs($folder, $filename, 'public');
             $normalizedPath = str_replace('\\', '/', $storedPath);
