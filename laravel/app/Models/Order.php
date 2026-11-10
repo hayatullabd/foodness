@@ -140,14 +140,14 @@ class Order extends Model
     }
 
     /**
-     * Compute total weight in KG from ordered items' attributes/variations/names.
+     * Compute total weight in KG strictly from ordered items' attributes and variations (not from product name).
      */
     public function estimatedWeightKg(): float
     {
         if ($this->relationLoaded('items')) {
             $items = $this->items;
         } else {
-            $items = $this->items()->with(['variant', 'product'])->get();
+            $items = $this->items()->with(['variant'])->get();
         }
 
         $totalKg = 0.0;
@@ -156,12 +156,7 @@ class Order extends Model
             $qty = max(1, (int) $item->qty);
             $itemWeight = null;
 
-            // Sources to search in order of priority:
-            // 1. attributes array / json
-            // 2. variation_name
-            // 3. variant name / attribute_values
-            // 4. product_name
-            // 5. product unit
+            // Sources to search: strictly item attributes and variations (excluding product_name)
             $sources = [];
 
             if (is_array($item->attributes)) {
@@ -173,16 +168,12 @@ class Order extends Model
             }
 
             if ($item->relationLoaded('variant') && $item->variant) {
-                if (! empty($item->variant->name)) {
-                    $sources[] = (string) $item->variant->name;
-                }
                 if (is_array($item->variant->attribute_values)) {
                     $sources = array_merge($sources, array_values($item->variant->attribute_values));
                 }
-            }
-
-            if (! empty($item->product_name)) {
-                $sources[] = (string) $item->product_name;
+                if (! empty($item->variant->name)) {
+                    $sources[] = (string) $item->variant->name;
+                }
             }
 
             foreach ($sources as $source) {
@@ -197,7 +188,7 @@ class Order extends Model
                 }
             }
 
-            // Default to 1 KG per line item if no weight pattern detected
+            // Default to 1 KG per line item if no weight attribute found
             $itemWeight = $itemWeight ?? 1.0;
             $totalKg += ($itemWeight * $qty);
         }
