@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Services\BdCourierFraudService;
 use App\Services\FraudOrderGate;
 use App\Services\OrderRestrictionService;
+use App\Support\OrderSources;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -153,7 +154,9 @@ class IncompleteOrderController extends Controller
                 'fraud_score' => $incompleteOrder->fraud_score,
                 'fraud_report' => $incompleteOrder->fraud_report,
                 'source' => 'incomplete',
-                'source_platform' => $incompleteOrder->source_platform,
+                'source_platform' => filled($incompleteOrder->source_platform)
+                    ? OrderSources::normalize($incompleteOrder->source_platform)
+                    : 'incomplete',
                 'landing_url' => $incompleteOrder->landing_url,
                 'referrer' => $incompleteOrder->referrer,
                 'utm_source' => $incompleteOrder->utm_source,

@@ -44,7 +44,11 @@ class OrderItem extends Model
     {
         if (! empty($this->variation_name)) {
             $val = trim((string) $this->variation_name);
-            if (str_starts_with($val, '{') && str_ends_with($val, '}')) {
+
+            // Filter out corrupt / raw model dump strings like "id: 14, order_id: 15, product_id: 61..."
+            if (str_contains($val, 'product_id:') || str_contains($val, 'order_id:') || str_contains($val, 'created_at:')) {
+                $val = '';
+            } elseif (str_starts_with($val, '{') && str_ends_with($val, '}')) {
                 $decoded = json_decode($val, true);
                 if (is_array($decoded)) {
                     if (! empty($decoded['name'])) {
@@ -54,7 +58,10 @@ class OrderItem extends Model
                         return implode(', ', $decoded['attribute_values']);
                     }
                 }
-            } else {
+                $val = '';
+            }
+
+            if ($val !== '') {
                 return $val;
             }
         }

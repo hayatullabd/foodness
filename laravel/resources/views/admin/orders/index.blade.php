@@ -831,6 +831,46 @@ body.is-col-resizing * {
             </div>
         @endif
 
+        @if (! empty($sourceCounts))
+            <div class="orders-source-counts mb-2 flex flex-wrap items-center gap-1.5">
+                <span class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Sources</span>
+                @foreach ($sourceCounts as $sourceCount)
+                    @php
+                        $sourceUrl = route('admin.orders.index', array_filter(array_merge($queryBase, [
+                            'section' => $currentSection,
+                            'status' => $currentStatus ?: null,
+                            'platform' => $sourceCount['key'],
+                            'tab' => null,
+                        ])));
+                        $isSourceActive = ($currentPlatform ?? '') === $sourceCount['key'];
+                    @endphp
+                    <a
+                        href="{{ $sourceUrl }}"
+                        @class([
+                            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition',
+                            'border-sage bg-sage text-white' => $isSourceActive,
+                            'border-slate-200 bg-white text-slate-600 hover:border-slate-300' => ! $isSourceActive,
+                        ])
+                        title="Filter by {{ $sourceCount['label'] }}"
+                    >
+                        <span>{{ $sourceCount['label'] }}</span>
+                        <span @class(['opacity-90' => $isSourceActive, 'text-slate-400' => ! $isSourceActive])>{{ $sourceCount['count'] }}</span>
+                    </a>
+                @endforeach
+                @if (filled($currentPlatform ?? null))
+                    <a
+                        href="{{ route('admin.orders.index', array_filter(array_merge($queryBase, [
+                            'section' => $currentSection,
+                            'status' => $currentStatus ?: null,
+                            'platform' => null,
+                            'tab' => null,
+                        ]))) }}"
+                        class="text-[11px] font-medium text-slate-500 underline-offset-2 hover:underline"
+                    >Clear source</a>
+                @endif
+            </div>
+        @endif
+
         {{-- Filter + bulk toolbar --}}
         <div class="orders-toolbar orders-toolbar-card">
             <div class="orders-toolbar-main">
@@ -872,10 +912,14 @@ body.is-col-resizing * {
                             <option value="with" @selected(request('tracking') === 'with')>Has tracking</option>
                             <option value="without" @selected(request('tracking') === 'without')>No tracking</option>
                         </select>
-                        <select name="platform" class="field w-[7rem]" aria-label="Platform">
-                            <option value="">Platform</option>
-                            @foreach (['facebook' => 'Facebook', 'instagram' => 'Instagram', 'google' => 'Google', 'tiktok' => 'TikTok', 'youtube' => 'YouTube', 'direct' => 'Direct', 'referral' => 'Referral'] as $value => $label)
-                                <option value="{{ $value }}" @selected(($currentPlatform ?? request('platform')) === $value)>{{ $label }}</option>
+                        <select name="platform" class="field w-[9rem]" aria-label="Order source">
+                            <option value="">Source</option>
+                            @foreach (($sourcePlatformGroups ?? \App\Support\OrderSources::groups()) as $group)
+                                <optgroup label="{{ $group['label'] }}">
+                                    @foreach ($group['options'] as $value => $label)
+                                        <option value="{{ $value }}" @selected(($currentPlatform ?? request('platform')) === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </optgroup>
                             @endforeach
                         </select>
                         <select name="per_page" class="field w-[5.5rem] font-medium text-slate-700" aria-label="Rows per page" onchange="this.form.submit()">
@@ -1042,20 +1086,9 @@ body.is-col-resizing * {
                                         <div class="min-w-0">
                                             <div class="flex items-center gap-1.5 min-w-0">
                                                 <div class="font-semibold tabular-nums text-ink truncate">{{ $order->customer_phone ?: '—' }}</div>
-                                                @php
-                                                    $sourcePlatform = strtolower((string) ($order->source_platform ?: ''));
-                                                    $knownPlatforms = ['facebook', 'instagram', 'google', 'tiktok', 'youtube', 'referral', 'direct'];
-                                                    $looksLikeIp = (bool) preg_match('/^\d{1,3}([._-]\d{1,3}){3}$/', $sourcePlatform)
-                                                        || filter_var(str_replace('_', '.', $sourcePlatform), FILTER_VALIDATE_IP);
-                                                    $showPlatformBadge = $sourcePlatform !== ''
-                                                        && in_array($sourcePlatform, $knownPlatforms, true)
-                                                        && ! $looksLikeIp;
-                                                @endphp
-                                                @if ($showPlatformBadge)
-                                                    @include('admin.partials.platform-badge', [
-                                                        'platform' => $sourcePlatform,
-                                                    ])
-                                                @endif
+                                                @include('admin.partials.platform-badge', [
+                                                    'platform' => $order->source_platform ?: 'direct',
+                                                ])
                                             </div>
                                             <div class="mt-0.5 truncate font-medium text-slate-700">{{ $order->customer_name }}</div>
                                             <div class="mt-0.5 truncate text-[11px] text-muted">

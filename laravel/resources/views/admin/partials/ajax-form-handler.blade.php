@@ -233,8 +233,15 @@
 
                 // 6. If form is a delete form for an image or item
                 if (form.id && form.id.startsWith('delete-product-image-')) {
-                    const imageCard = form.closest('[data-image-card]') || document.querySelector(`[data-image-id="${form.id.replace('delete-product-image-', '')}"]`);
+                    const imgId = form.id.replace('delete-product-image-', '');
+                    const imageCard = form.closest('[data-image-card]') 
+                        || document.querySelector(`[data-image-id="${imgId}"]`)
+                        || document.querySelector(`[data-gallery-item][data-image-id="${imgId}"]`);
                     imageCard?.remove();
+                    window.updateGalleryOrderNumbers?.();
+                } else if (form.id === 'delete-product-meta-image') {
+                    const metaSlot = document.querySelector('[data-meta-current]');
+                    metaSlot?.remove();
                 }
 
                 // Dispatch global event for custom page handlers

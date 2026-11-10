@@ -193,7 +193,16 @@ class ProductVariant extends Model
 
     public function primaryImagePath(): ?string
     {
-        return $this->image ?: ($this->image_2 ?: ($this->image_3 ?: ($this->image_4 ?: $this->product?->primaryImagePath())));
+        $path = $this->image ?: ($this->image_2 ?: ($this->image_3 ?: $this->image_4));
+        if ($path) {
+            return $path;
+        }
+
+        if ($this->relationLoaded('product')) {
+            return $this->product?->primaryImagePath();
+        }
+
+        return null;
     }
 
     public function product(): BelongsTo

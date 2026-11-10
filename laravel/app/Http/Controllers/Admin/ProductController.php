@@ -16,6 +16,7 @@ use App\Models\ShippingCharge;
 use App\Models\Size;
 use App\Models\Subcategory;
 use App\Services\ImageUploadService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -218,35 +219,59 @@ class ProductController extends Controller
             ->with('success', 'Product deleted successfully.');
     }
 
-    public function destroyImage(Product $product, ProductImage $image): RedirectResponse
+    public function destroyImage(Request $request, Product $product, ProductImage $image): JsonResponse|RedirectResponse
     {
         abort_unless($image->product_id === $product->id, 404);
 
-        $path = $image->path;
-        $wasPrimary = $image->is_primary;
-        $image->delete();
+        try {
+            $path = $image->path;
+            $wasPrimary = $image->is_primary;
+            $image->delete();
 
-        // Safely check if this image path is used anywhere else before deleting the physical file
-        if ($path) {
-            $isUsedElsewhere = ProductImage::query()->where('path', $path)->exists()
-                || Product::query()->where('meta_image', $path)->exists()
-                || ProductVariant::query()->where('image', $path)->orWhere('image_2', $path)->orWhere('image_3', $path)->orWhere('image_4', $path)->exists()
-                || Category::query()->where('image', $path)->exists()
-                || Brand::query()->where('image', $path)->exists();
+            // Safely check if this image path is used anywhere else before deleting the physical file
+            if ($path) {
+                $isUsedElsewhere = ProductImage::query()->where('path', $path)->exists()
+                    || Product::query()->where('meta_image', $path)->exists()
+                    || ProductVariant::query()->where('image', $path)->orWhere('image_2', $path)->orWhere('image_3', $path)->orWhere('image_4', $path)->exists()
+                    || Category::query()->where('image', $path)->exists()
+                    || Brand::query()->where('image', $path)->exists();
 
-            if (! $isUsedElsewhere) {
-                Storage::disk('public')->delete($path);
+                if (! $isUsedElsewhere) {
+                    try {
+                        Storage::disk('public')->delete($path);
+                    } catch (\Throwable $e) {
+                        \Log::warning('Physical image delete failed: '.$e->getMessage());
+                    }
+                }
             }
-        }
 
-        if ($wasPrimary) {
-            $next = $product->images()->first();
-            if ($next) {
-                $next->update(['is_primary' => true]);
+            if ($wasPrimary) {
+                $next = $product->images()->first();
+                if ($next) {
+                    $next->update(['is_primary' => true]);
+                }
             }
-        }
 
-        return back()->with('success', 'Image removed from gallery.');
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Image removed from gallery.',
+                ]);
+            }
+
+            return back()->with('success', 'Image removed from gallery.');
+        } catch (\Throwable $e) {
+            \Log::error('Image removal error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to remove image: '.$e->getMessage(),
+                ], 500);
+            }
+
+            return back()->with('error', 'Failed to remove image.');
+        }
     }
 
     public function destroyMetaImage(Product $product): RedirectResponse

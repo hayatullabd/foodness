@@ -25,7 +25,7 @@ class StoreOrderRequest extends FormRequest
             'delivery_division' => ['nullable', 'string', 'max:255'],
             'delivery_district' => ['nullable', 'string', 'max:255'],
             'delivery_upazila' => ['nullable', 'string', 'max:255'],
-            'source_platform' => ['nullable', 'string', 'max:50'],
+            'source_platform' => ['nullable', 'string', 'max:50', Rule::in(array_keys(\App\Support\OrderSources::forManualCreate()))],
             'payment_method' => ['required', 'string', 'max:50'],
             'payment_status' => ['nullable', 'string', Rule::in(['pending', 'paid', 'failed', 'refunded'])],
             'order_status_id' => ['nullable', 'integer', Rule::exists('order_statuses', 'id')],

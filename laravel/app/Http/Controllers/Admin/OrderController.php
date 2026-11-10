@@ -24,6 +24,7 @@ use App\Services\Courier\CourierShipmentService;
 use App\Services\GeminiService;
 use App\Services\StoreEmailService;
 use App\Support\CourierRatioCards;
+use App\Support\OrderSources;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -272,6 +273,54 @@ class OrderController extends Controller
             $courierBookedTotal = (int) $courierBookedCounts->sum();
         }
 
+        $sourceCounts = [];
+        if (! $isIncompleteTab) {
+            try {
+                $rawPlatformCounts = Order::query()
+                    ->when(
+                        $currentSection === 'courier',
+                        fn ($query) => $query->where($isCourierCondition),
+                        fn ($query) => $query->where($isNotCourierCondition),
+                    )
+                    ->select('source_platform', DB::raw('COUNT(*) as aggregate'))
+                    ->groupBy('source_platform')
+                    ->pluck('aggregate', 'source_platform');
+
+                $sourceCountsRaw = [];
+                foreach ($rawPlatformCounts as $platform => $count) {
+                    $key = OrderSources::normalize(is_string($platform) ? $platform : null, 'direct');
+                    $sourceCountsRaw[$key] = ($sourceCountsRaw[$key] ?? 0) + (int) $count;
+                }
+
+                foreach (OrderSources::all() as $key => $label) {
+                    $count = (int) ($sourceCountsRaw[$key] ?? 0);
+                    if ($count > 0) {
+                        $sourceCounts[] = [
+                            'key' => $key,
+                            'label' => $label,
+                            'count' => $count,
+                        ];
+                    }
+                }
+
+                foreach ($sourceCountsRaw as $key => $count) {
+                    if (OrderSources::isKnown($key) || (int) $count < 1) {
+                        continue;
+                    }
+                    $sourceCounts[] = [
+                        'key' => $key,
+                        'label' => OrderSources::label($key),
+                        'count' => (int) $count,
+                    ];
+                }
+
+                usort($sourceCounts, fn (array $a, array $b): int => $b['count'] <=> $a['count']);
+            } catch (Throwable $e) {
+                Log::warning('Order source counts skipped.', ['error' => $e->getMessage()]);
+                $sourceCounts = [];
+            }
+        }
+
         return view('admin.orders.index', [
             'orders' => $orders,
             'incompleteOrders' => $incompleteOrders,
@@ -291,6 +340,8 @@ class OrderController extends Controller
             'courierSections' => $courierSections,
             'courierBookedTotal' => $courierBookedTotal,
             'perPage' => $perPage,
+            'sourcePlatformGroups' => OrderSources::groups(),
+            'sourceCounts' => $sourceCounts,
         ]);
     }
 
@@ -334,13 +385,7 @@ class OrderController extends Controller
                 'failed' => 'Failed',
                 'refunded' => 'Refunded',
             ],
-            'sourcePlatforms' => [
-                'phone_call' => 'Phone Call',
-                'whatsapp' => 'WhatsApp',
-                'facebook' => 'Facebook / Messenger',
-                'message' => 'SMS / Message',
-                'manual' => 'Direct / Walk-in / Other',
-            ],
+            'sourcePlatforms' => OrderSources::forManualCreate(),
         ]);
     }
 
@@ -570,7 +615,7 @@ class OrderController extends Controller
                 'notes' => $validated['notes'] ?? null,
                 'admin_notes' => $validated['admin_notes'] ?? null,
                 'source' => 'manual',
-                'source_platform' => $validated['source_platform'] ?? 'manual',
+                'source_platform' => OrderSources::normalize($validated['source_platform'] ?? null, 'phone_call'),
                 'ip_address' => request()->ip(),
             ]);
 
@@ -578,13 +623,7 @@ class OrderController extends Controller
                 $order->items()->create($item);
             }
 
-            $sourceLabel = match ($order->source_platform) {
-                'phone_call' => 'Phone Call',
-                'whatsapp' => 'WhatsApp',
-                'facebook' => 'Facebook / Messenger',
-                'message' => 'SMS / Message',
-                default => 'Manual Entry',
-            };
+            $sourceLabel = OrderSources::label($order->source_platform);
 
             OrderActivityLog::record(
                 $order,

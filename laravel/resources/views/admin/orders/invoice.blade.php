@@ -763,6 +763,9 @@
                         @foreach ($order->items as $item)
                             @php
                                 $variantText = $item->variantLabel();
+                                if ($variantText && (str_contains($variantText, 'order_id:') || str_contains($variantText, 'product_id:') || str_contains($variantText, 'created_at:'))) {
+                                    $variantText = null;
+                                }
                                 $lineTotal = $item->price * $item->qty;
                             @endphp
                             <tr>

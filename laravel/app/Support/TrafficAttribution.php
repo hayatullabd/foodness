@@ -119,16 +119,7 @@ class TrafficAttribution
 
     public function platformLabel(?string $platform): string
     {
-        return match (strtolower((string) $platform)) {
-            'facebook' => 'Facebook',
-            'instagram' => 'Instagram',
-            'google' => 'Google',
-            'tiktok' => 'TikTok',
-            'youtube' => 'YouTube',
-            'referral' => 'Referral',
-            'direct', '' => 'Direct',
-            default => $platform ? str($platform)->replace('_', ' ')->title()->toString() : 'Direct',
-        };
+        return OrderSources::label($platform);
     }
 
     /**

@@ -88,7 +88,7 @@
                     </div>
 
                     <div>
-                        <label class="admin-label" for="top_source_platform">Received Via (Order Channel)</label>
+                        <label class="admin-label" for="top_source_platform">Order Source</label>
                         <select id="top_source_platform" class="field" form="order-create-form" name="source_platform">
                             @foreach ($sourcePlatforms as $key => $label)
                                 <option value="{{ $key }}" @selected(old('source_platform', 'phone_call') === $key)>{{ $label }}</option>

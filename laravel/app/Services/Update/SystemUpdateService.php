@@ -376,6 +376,10 @@ class SystemUpdateService
 
             // 6. Clear optimize and view cache
             Artisan::call('optimize:clear');
+            Artisan::call('view:clear');
+
+            // 6b. Refresh Composer classmap when available (new App\ classes after ZIP updates)
+            $this->refreshComposerAutoload();
 
             // 7. Bring application out of maintenance mode
             Artisan::call('up');
@@ -637,6 +641,40 @@ class SystemUpdateService
             }
         } catch (Throwable $e) {
             Log::warning('Shared hosting public asset sync skipped.', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Best-effort Composer classmap refresh so new App\ classes load after ZIP updates.
+     */
+    protected function refreshComposerAutoload(): void
+    {
+        try {
+            $composerPhar = base_path('composer.phar');
+            $commands = [];
+
+            if (is_file($composerPhar)) {
+                $commands[] = 'php '.escapeshellarg($composerPhar).' dump-autoload -o --no-interaction';
+            }
+
+            $commands[] = 'composer dump-autoload -o --no-interaction';
+
+            foreach ($commands as $command) {
+                $output = [];
+                $exitCode = 0;
+                @exec($command.' 2>&1', $output, $exitCode);
+                if ($exitCode === 0) {
+                    Log::info('Composer autoload refreshed after system update.', [
+                        'command' => $command,
+                    ]);
+
+                    return;
+                }
+            }
+        } catch (Throwable $e) {
+            Log::warning('Composer autoload refresh skipped after update.', [
                 'error' => $e->getMessage(),
             ]);
         }
