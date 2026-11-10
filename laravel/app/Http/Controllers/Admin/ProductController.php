@@ -274,26 +274,48 @@ class ProductController extends Controller
         }
     }
 
-    public function destroyMetaImage(Product $product): RedirectResponse
+    public function destroyMetaImage(Request $request, Product $product): JsonResponse|RedirectResponse
     {
         if ($product->meta_image) {
-            Storage::disk('public')->delete($product->meta_image);
+            try {
+                Storage::disk('public')->delete($product->meta_image);
+            } catch (\Throwable $e) {
+                \Log::warning('Meta image disk delete failed: '.$e->getMessage());
+            }
             $product->update(['meta_image' => null]);
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Meta image removed.',
+            ]);
         }
 
         return back()->with('success', 'Meta image removed.');
     }
 
-    public function destroyVideo(Product $product, ProductVideo $video): RedirectResponse
+    public function destroyVideo(Request $request, Product $product, ProductVideo $video): JsonResponse|RedirectResponse
     {
         abort_unless($video->product_id === $product->id, 404);
 
         if ($video->isUpload() && $video->path) {
-            Storage::disk('public')->delete($video->path);
+            try {
+                Storage::disk('public')->delete($video->path);
+            } catch (\Throwable $e) {
+                \Log::warning('Video disk delete failed: '.$e->getMessage());
+            }
         }
 
         $video->delete();
         $this->syncYoutubeVideoId($product);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Video removed.',
+            ]);
+        }
 
         return back()->with('success', 'Video removed.');
     }
