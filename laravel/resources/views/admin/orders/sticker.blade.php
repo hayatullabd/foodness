@@ -243,25 +243,15 @@
             margin: 6px 0;
         }
 
-        /* QR + Meta Table */
+        /* Meta Table */
         .qr-meta-row {
-            display: grid;
-            grid-template-columns: 70px 1fr;
-            gap: 10px;
-            align-items: center;
             padding: 2px 0;
-        }
-
-        .qr-wrap {
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         .meta-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 8pt;
+            font-size: 8.5pt;
         }
 
         .meta-table td {
@@ -272,7 +262,7 @@
         .meta-label {
             color: #71717a;
             font-weight: 600;
-            width: 45%;
+            width: 30%;
             letter-spacing: 0.5px;
         }
 
@@ -314,9 +304,13 @@
         }
 
         .det-value.note {
-            font-style: italic;
-            font-weight: 500;
-            color: #4b5563;
+            font-style: normal;
+            font-weight: 700;
+            color: #09090b;
+            background: #fef08a;
+            padding: 1px 4px;
+            border-radius: 3px;
+            display: inline-block;
         }
 
         /* Cash On Delivery Box */
@@ -465,6 +459,9 @@
                 $itemsSummary = $order->items->map(function ($item) {
                     $name = $item->product_name;
                     $variant = $item->variantLabel();
+                    if ($variant && (str_contains($variant, 'order_id:') || str_contains($variant, 'product_id:') || str_contains($variant, 'created_at:') || str_starts_with($variant, 'id:'))) {
+                        $variant = null;
+                    }
                     $label = $variant ? "{$name} ({$variant})" : $name;
                     return Str::limit($label, 45) . ($item->qty > 1 ? " x {$item->qty}" : '');
                 })->implode(', ');
@@ -496,11 +493,8 @@
 
                 <div class="divider"></div>
 
-                {{-- QR Code + Meta Info --}}
+                {{-- Meta Info (No QR) --}}
                 <div class="qr-meta-row">
-                    <div class="qr-wrap">
-                        {!! \App\Support\QrCode::svg($trackingCode, 66) !!}
-                    </div>
                     <table class="meta-table">
                         <tr>
                             <td class="meta-label">INVOICE</td>
@@ -512,7 +506,7 @@
                         </tr>
                         <tr>
                             <td class="meta-label">WEIGHT</td>
-                            <td class="meta-value">{{ $order->weight ?: '1' }} KG</td>
+                            <td class="meta-value">{{ (float) ($order->weight ?? $order->estimatedWeightKg()) }} KG</td>
                         </tr>
                     </table>
                 </div>

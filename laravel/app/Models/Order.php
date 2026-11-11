@@ -201,21 +201,31 @@ class Order extends Model
      */
     protected function parseWeightString(string $text): ?float
     {
-        // Convert Bengali numerals to English numerals
+        // Convert Bengali numerals, Bengali danda and comma decimals
         $s = str_replace(
-            ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'],
-            ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+            ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯', '।', ','],
+            ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '.'],
             $text
         );
 
-        // Pattern 1: KG / কেজি (e.g. "1.5 kg", "১ কেজি", "11 কেজি")
-        if (preg_match('/([\d\.]+)\s*(?:kg|কেজি|কে\.জি|k\.g)/iu', $s, $m)) {
+        // Pattern 1 (Composite): e.g. "২ কেজি ৫০০ গ্রাম" -> 2.5 KG
+        if (preg_match('/([\d\.]+)\s*(?:kg|কেজি|কে\.জি|k\.g|k|কে)\b.*?([\d\.]+)\s*(?:gm|gram|g|গ্রাম|গ্রা|গ্রামের)/iu', $s, $m)) {
+            return (float) $m[1] + ((float) $m[2] / 1000.0);
+        }
+
+        // Pattern 2: KG / কেজি / কে.জি / K / কে (e.g. "2.5 kg", "২.৫ কেজি", "২.৫কেজি", "2.5k", "২.৫কে")
+        if (preg_match('/([\d\.]+)\s*(?:kg|কেজি|কে\.জি|k\.g|k|কে)/iu', $s, $m)) {
             return (float) $m[1];
         }
 
-        // Pattern 2: Gram / গ্রাম / GM (e.g. "500 গ্রাম", "250 gm", "500g")
+        // Pattern 3: Gram / গ্রাম / GM (e.g. "500 গ্রাম", "250 gm", "500g")
         if (preg_match('/([\d\.]+)\s*(?:gm|gram|g|গ্রাম|গ্রা|গ্রামের)/iu', $s, $m)) {
             return (float) $m[1] / 1000.0;
+        }
+
+        // Pattern 4: Bare number if attribute strictly contains number (e.g. "2.5")
+        if (preg_match('/^\s*([\d\.]+)\s*$/', $s, $m)) {
+            return (float) $m[1];
         }
 
         return null;
