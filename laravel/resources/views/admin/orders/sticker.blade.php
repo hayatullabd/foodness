@@ -466,6 +466,44 @@
                     return Str::limit($label, 45) . ($item->qty > 1 ? " x {$item->qty}" : '');
                 })->implode(', ');
                 $merchantId = $order->courierApi?->api_key ? substr($order->courierApi->api_key, 0, 8) : ($storePhone ?: 'FOODNESS');
+
+                // Extract exact raw weight from product attributes / variation without converting
+                $rawWeights = [];
+                foreach ($order->items as $item) {
+                    $found = null;
+                    if (is_array($item->attributes) && ! empty($item->attributes)) {
+                        foreach ($item->attributes as $k => $v) {
+                            if (is_string($v) && trim($v) !== '') {
+                                $found = trim($v);
+                                break;
+                            }
+                        }
+                    }
+                    if (! $found && ! empty($item->variation_name)) {
+                        $val = trim((string) $item->variation_name);
+                        if (! str_contains($val, 'product_id:') && ! str_contains($val, 'order_id:') && ! str_contains($val, 'created_at:')) {
+                            if (str_starts_with($val, '{') && str_ends_with($val, '}')) {
+                                $decoded = json_decode($val, true);
+                                if (is_array($decoded)) {
+                                    $found = $decoded['name'] ?? (is_array($decoded['attribute_values'] ?? null) ? implode(', ', $decoded['attribute_values']) : null);
+                                }
+                            } else {
+                                $found = $val;
+                            }
+                        }
+                    }
+                    if (! $found && $item->relationLoaded('variant') && $item->variant) {
+                        if (is_array($item->variant->attribute_values) && ! empty($item->variant->attribute_values)) {
+                            $found = implode(', ', array_values($item->variant->attribute_values));
+                        } elseif (! empty($item->variant->name)) {
+                            $found = (string) $item->variant->name;
+                        }
+                    }
+                    if ($found) {
+                        $rawWeights[] = $found . ($item->qty > 1 ? " x {$item->qty}" : '');
+                    }
+                }
+                $attributeWeight = ! empty($rawWeights) ? implode(', ', $rawWeights) : ($order->weight ? ($order->weight . ' KG') : '1 KG');
             @endphp
             <div class="sticker-card" id="sticker-{{ $order->id }}">
                 {{-- Top: Logo Left | Merchant Right --}}
@@ -506,7 +544,7 @@
                         </tr>
                         <tr>
                             <td class="meta-label">WEIGHT</td>
-                            <td class="meta-value">{{ (float) ($order->weight ?? $order->estimatedWeightKg()) }} KG</td>
+                            <td class="meta-value">{{ $attributeWeight }}</td>
                         </tr>
                     </table>
                 </div>
